@@ -27,15 +27,15 @@ var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCors(opt =>
-{
-    opt.AddDefaultPolicy(builder =>
-    {
-        builder.AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
-});
+//builder.Services.AddCors(opt =>
+//{
+//    opt.AddDefaultPolicy(builder =>
+//    {
+//        builder.AllowAnyOrigin()
+//            .AllowAnyHeader()
+//            .AllowAnyMethod();
+//    });
+//});
 
 
 // Add services to the container.
@@ -146,11 +146,11 @@ var serviceProvider = app.Services;
 
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+//}
 
 
 app.UseHttpsRedirection();      
