@@ -17,14 +17,18 @@ namespace Organisation_WebAPI.Services.Dashboard
             _context = context;
         
         }
-
+    
+    // Get the count of employee tasks for each status based on the employee's ID.
      public async Task<ServiceResponse<Dictionary<Status, int>>> GetEmployeeTaskCount(int id)
      {
         var serviceResponse = new ServiceResponse<Dictionary<Status, int>>();
 
         try
-        {
+        {   
+            // Get all possible Status enum values
             var allStatuses = Enum.GetValues(typeof(Status)).Cast<Status>();
+
+            // Group and count employee tasks by TaskStatus and convert it to a dictionary
             var taskStatusCounts = await _context.EmployeeTasks
             .Where(employee => employee.EmployeeId == id)
             .GroupBy(employee => employee.TaskStatus)
@@ -44,13 +48,16 @@ namespace Organisation_WebAPI.Services.Dashboard
             return serviceResponse;
         }
 
+
+        //Retrieves the total count of EmployeeTasks based on managerId
         public async Task<ServiceResponse<Dictionary<Status, int>>> GetEmployeeTasksByManager(int id)
         {
             var serviceResponse = new ServiceResponse<Dictionary<Status, int>>();
             var taskCounts = new Dictionary<Status, int>();
 
             try
-            {
+            {   
+                //Get EmployeeTasks with ManagerId
                 var tasks = await _context.EmployeeTasks
                     .Include(t => t.Employee)
                     .Where(t => t.Employee!.ManagerID == id)
@@ -83,22 +90,26 @@ namespace Organisation_WebAPI.Services.Dashboard
         }
 
 
-        public async Task<ServiceResponse<Dictionary<string, int>>> GetTotalEmployeeCount()
-       {
+    //Retrieves the total count of employees in each department.
+    public async Task<ServiceResponse<Dictionary<string, int>>> GetTotalEmployeeCount()
+    {
         var serviceResponse = new ServiceResponse<Dictionary<string, int>>();
 
         try
         {
-        var departments = await _context.Departments.ToListAsync();
+            // Retrieve all departments from the database.
+            var departments = await _context.Departments.ToListAsync();
 
-        var tableCounts = new Dictionary<string, int>();
-        foreach (var department in departments)
-        {
-            var employeesCount = await _context.Employees.CountAsync(e => e.Manager!.DepartmentID == department.DepartmentID);
-            tableCounts.Add(department.DepartmentName!, employeesCount);
-        }
+            var tableCounts = new Dictionary<string, int>();
 
-        serviceResponse.Data = tableCounts;
+            // Loop through each department to calculate the total number of employees.
+            foreach (var department in departments)
+            {
+                var employeesCount = await _context.Employees.CountAsync(e => e.Manager!.DepartmentID == department.DepartmentID);
+                tableCounts.Add(department.DepartmentName!, employeesCount);
+            }
+
+            serviceResponse.Data = tableCounts;
         }
         catch (Exception ex)
         {

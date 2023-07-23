@@ -19,7 +19,5 @@ namespace Organisation_WebAPI.Services.AuthRepo
         Task<ServiceResponse<List<GetUserDto>>> GetAllUsers();
         Task<bool> UserExists(string username);
         Task<ServiceResponse<string>> AppointNewManager(int managerId, NewManagerDto model);
-
-
     }
 }

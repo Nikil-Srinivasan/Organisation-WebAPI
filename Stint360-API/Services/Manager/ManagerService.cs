@@ -16,14 +16,18 @@ using Organisation_WebAPI.ViewModels;
 namespace Organisation_WebAPI.Services.Managers
 {
     public class ManagerService : IManagerService
-    {   
+    {
+        private readonly IMapper _mapper; // Provides object-object mapping
+        private readonly OrganizationContext _context; // Represents the database context
+        private readonly IPaginationServices<GetManagerDto, GetManagerDto> _paginationServices; //Provides Pagination service
+        private readonly IHttpContextAccessor _httpContextAccessor; // Provides HttpContextAccessor Serivce
 
-        private readonly IMapper _mapper;  // Provides object-object mapping
-        private readonly OrganizationContext _context ; // Represents the database context
-        private readonly IPaginationServices<GetManagerDto, GetManagerDto> _paginationServices;
-        private readonly IHttpContextAccessor _httpContextAccessor;
-
-        public ManagerService(OrganizationContext context,IMapper mapper, IPaginationServices<GetManagerDto, GetManagerDto> paginationServices,IHttpContextAccessor httpContextAccessor)
+        public ManagerService(
+            OrganizationContext context,
+            IMapper mapper,
+            IPaginationServices<GetManagerDto, GetManagerDto> paginationServices,
+            IHttpContextAccessor httpContextAccessor
+        )
         {
             _mapper = mapper;
             _context = context;
@@ -31,67 +35,79 @@ namespace Organisation_WebAPI.Services.Managers
             _httpContextAccessor = httpContextAccessor;
         }
 
-        private int GetUserId() => int.Parse(_httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+        private int GetUserId() =>
+            int.Parse(
+                _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            );
 
         public async Task<ServiceResponse<List<GetManagerDto>>> AddManager(AddManagerDto newManager)
         {
             var serviceResponse = new ServiceResponse<List<GetManagerDto>>();
-            try {
-            var manager = _mapper.Map<Manager>(newManager);
-             _context.Managers.Add(manager);
-            await _context.SaveChangesAsync();
-            serviceResponse.Data = await _context.Managers.Select(c => _mapper.Map<GetManagerDto>(c)).ToListAsync();
+            try
+            {
+                var manager = _mapper.Map<Manager>(newManager);
+                _context.Managers.Add(manager);
+                await _context.SaveChangesAsync();
+                serviceResponse.Data = await _context.Managers
+                    .Select(c => _mapper.Map<GetManagerDto>(c))
+                    .ToListAsync();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 serviceResponse.Success = false;
                 serviceResponse.Message = ex.Message;
             }
-            return serviceResponse;   
-        }    
-
+            return serviceResponse;
+        }
 
         public async Task<ServiceResponse<List<GetManagerDto>>> DeleteManager(int id)
         {
             var serviceResponse = new ServiceResponse<List<GetManagerDto>>();
-            try {
+            try
+            {
+                var manager = await _context.Managers.FirstOrDefaultAsync(c => c.ManagerId == id);
+                if (manager is null)
+                    throw new Exception($"Manager with id '{id}' not found");
 
-            var manager = await _context.Managers.FirstOrDefaultAsync(c => c.ManagerId == id);
-            if (manager is null)
-                throw new Exception($"Manager with id '{id}' not found");
-            
-            _context.Managers.Remove(manager);
-            await _context.SaveChangesAsync();
-            serviceResponse.Data = _context.Managers.Select(c => _mapper.Map<GetManagerDto>(c)).ToList();
+                _context.Managers.Remove(manager);
+                await _context.SaveChangesAsync();
+                serviceResponse.Data = _context.Managers
+                    .Select(c => _mapper.Map<GetManagerDto>(c))
+                    .ToList();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 serviceResponse.Success = false;
                 serviceResponse.Message = ex.Message;
             }
-                return serviceResponse;
+            return serviceResponse;
         }
 
-        public async Task<ServiceResponse<PaginationResultVM<GetManagerDto>>> GetAllManagers(PaginationInput paginationInput)
-        {   
+        public async Task<ServiceResponse<PaginationResultVM<GetManagerDto>>> GetAllManagers(
+            PaginationInput paginationInput
+        )
+        {
             var serviceResponse = new ServiceResponse<PaginationResultVM<GetManagerDto>>();
             try
             {
-            var dbManagers = await _context.Managers.ToListAsync();
-            var managerDTOs = dbManagers.Select(e => { 
-                
-                var managerDTO = _mapper.Map<GetManagerDto>(e);
-                managerDTO.DepartmentName = _context.Departments.FirstOrDefault(d => d.DepartmentID == e.DepartmentID)?.DepartmentName;
-                return managerDTO;
-            }).ToList();
+                var dbManagers = await _context.Managers.ToListAsync();
+                var managerDTOs = dbManagers
+                    .Select(e =>
+                    {
+                        var managerDTO = _mapper.Map<GetManagerDto>(e);
+                        managerDTO.DepartmentName = _context.Departments
+                            .FirstOrDefault(d => d.DepartmentID == e.DepartmentID)
+                            ?.DepartmentName;
+                        return managerDTO;
+                    })
+                    .ToList();
                 var managers = _mapper.Map<List<GetManagerDto>>(managerDTOs);
 
                 var result = _paginationServices.GetPagination(managers, paginationInput);
 
                 serviceResponse.Data = result;
             }
-
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 serviceResponse.Success = false;
                 serviceResponse.Message = ex.Message;
@@ -100,20 +116,27 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
-
-        public async Task<ServiceResponse<List<ManagerDepartmentDto>>> GetAllDepartmentsAssociatedWithManager()
+        public async Task<
+            ServiceResponse<List<ManagerDepartmentDto>>
+        > GetAllDepartmentsAssociatedWithManager()
         {
             var serviceResponse = new ServiceResponse<List<ManagerDepartmentDto>>();
             try
             {
                 var dbManagers = await _context.Managers.ToListAsync();
-                var managerDepartmentList = dbManagers.Select(m => new ManagerDepartmentDto
-                {
-                    ManagerId = m.ManagerId,
-                    DepartmentName = _context.Departments.FirstOrDefault(d => d.DepartmentID == m.DepartmentID)?.DepartmentName,
-                    IsAppointed = m.IsAppointed
-                    
-                }).ToList();
+                var managerDepartmentList = dbManagers
+                    .Select(
+                        m =>
+                            new ManagerDepartmentDto
+                            {
+                                ManagerId = m.ManagerId,
+                                DepartmentName = _context.Departments
+                                    .FirstOrDefault(d => d.DepartmentID == m.DepartmentID)
+                                    ?.DepartmentName,
+                                IsAppointed = m.IsAppointed
+                            }
+                    )
+                    .ToList();
 
                 serviceResponse.Data = managerDepartmentList;
             }
@@ -125,7 +148,6 @@ namespace Organisation_WebAPI.Services.Managers
 
             return serviceResponse;
         }
-
 
         public async Task<ServiceResponse<GetManagerDto>> GetManagerByDepartmentId(int departmentId)
         {
@@ -156,7 +178,9 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
-        public async Task<ServiceResponse<GetEmployeesAndManagerDto>> GetEmployeesAndManagerByDepartmentId(int departmentId)
+        public async Task<
+            ServiceResponse<GetEmployeesAndManagerDto>
+        > GetEmployeesAndManagerByDepartmentId(int departmentId)
         {
             var serviceResponse = new ServiceResponse<GetEmployeesAndManagerDto>();
             try
@@ -165,7 +189,9 @@ namespace Organisation_WebAPI.Services.Managers
                     .Include(m => m.Department)
                     .Include(m => m.Employees)
                     .FirstOrDefaultAsync(m => m.DepartmentID == departmentId);
-                var department = await _context.Departments.FirstOrDefaultAsync(d => d.DepartmentID == departmentId);
+                var department = await _context.Departments.FirstOrDefaultAsync(
+                    d => d.DepartmentID == departmentId
+                );
 
                 var managerDto = _mapper.Map<GetEmployeesAndManagerDto>(manager);
 
@@ -180,7 +206,6 @@ namespace Organisation_WebAPI.Services.Managers
                 if (department != null)
                 {
                     managerDto.DepartmentName = department.DepartmentName;
-
                 }
 
                 serviceResponse.Data = managerDto;
@@ -193,22 +218,21 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
-
         public async Task<ServiceResponse<GetManagerDto>> GetManagerById(int id)
         {
             var serviceResponse = new ServiceResponse<GetManagerDto>();
             try
             {
-            var dbManager = await _context.Managers
-            .Include(m => m.Department) // Eagerly load the associated department
-            .FirstOrDefaultAsync(m => m.ManagerId == id);
-            if (dbManager is null)
-                throw new Exception($"Manager with id '{id}' not found");
+                var dbManager = await _context.Managers
+                    .Include(m => m.Department) // Eagerly load the associated department
+                    .FirstOrDefaultAsync(m => m.ManagerId == id);
+                if (dbManager is null)
+                    throw new Exception($"Manager with id '{id}' not found");
 
-            serviceResponse.Data = _mapper.Map<GetManagerDto>(dbManager);
-            return serviceResponse;
+                serviceResponse.Data = _mapper.Map<GetManagerDto>(dbManager);
+                return serviceResponse;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 serviceResponse.Success = false;
                 serviceResponse.Message = ex.Message;
@@ -216,12 +240,14 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
-
-
-        public async Task<ServiceResponse<GetManagerDto>> UpdateManager(UpdateManagerDto updatedManager, int id)
+        public async Task<ServiceResponse<GetManagerDto>> UpdateManager(
+            UpdateManagerDto updatedManager,
+            int id
+        )
         {
             var serviceResponse = new ServiceResponse<GetManagerDto>();
-            try {
+            try
+            {
                 var manager = await _context.Managers.FirstOrDefaultAsync(c => c.ManagerId == id);
 
                 if (manager is null)
@@ -238,12 +264,12 @@ namespace Organisation_WebAPI.Services.Managers
 
                 return serviceResponse;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 serviceResponse.Success = false;
                 serviceResponse.Message = ex.Message;
             }
-            
+
             return serviceResponse;
         }
     }

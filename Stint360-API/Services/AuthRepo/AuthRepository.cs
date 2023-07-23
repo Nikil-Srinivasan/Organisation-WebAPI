@@ -17,7 +17,6 @@ using System.Security.Claims;
 using System.Text.RegularExpressions;
 using static System.Net.WebRequestMethods;
 
-
 namespace Organisation_WebAPI.Services.AuthRepo
 {
     public class AuthRepository : IAuthRepository
@@ -30,9 +29,14 @@ namespace Organisation_WebAPI.Services.AuthRepo
         private readonly IMemoryCache _memoryCache;
         private readonly IMapper _mapper;
 
-
-        public AuthRepository(OrganizationContext dbContext, IConfiguration configuration, IJwtUtils jwtUtils,
-            IEmailSender emailSender, IMemoryCache memoryCache, IMapper mapper)
+        public AuthRepository(
+            OrganizationContext dbContext,
+            IConfiguration configuration,
+            IJwtUtils jwtUtils,
+            IEmailSender emailSender,
+            IMemoryCache memoryCache,
+            IMapper mapper
+        )
         {
             _dbContext = dbContext;
             _emailSender = emailSender;
@@ -46,31 +50,32 @@ namespace Organisation_WebAPI.Services.AuthRepo
         public async Task<ServiceResponse<string>> Login(string username, string password)
         {
             var response = new ServiceResponse<string>();
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserName!.ToLower() == username.ToLower());
+            var user = await _dbContext.Users.FirstOrDefaultAsync(
+                u => u.UserName!.ToLower() == username.ToLower()
+            );
             if (user == null)
             {
                 response.Success = false;
                 response.Message = "User Not Found";
             }
-
             else if (!VerifyPasswordHash(password, user.PasswordHash!, user.PasswordSalt!))
             {
                 response.Success = false;
                 response.Message = "Incorrect Password";
-
             }
             else
             {
-                if (user.Role == UserRole.Manager) {
+                if (user.Role == UserRole.Manager)
+                {
                     var manager = await _dbContext.Managers.FindAsync(user.UserID);
-                    if (manager.IsAppointed == false) {
+                    if (manager.IsAppointed == false)
+                    {
                         response.Success = false;
                         response.Message = "User Not Found";
                         return response;
                     }
                 }
                 response.Data = _jwtUtils.GenerateJwtToken(user);
-
             }
             return response;
         }
@@ -93,7 +98,9 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
-            var ExistingEmail = await _dbContext.Users.FirstOrDefaultAsync(e => model.Email == e.Email);
+            var ExistingEmail = await _dbContext.Users.FirstOrDefaultAsync(
+                e => model.Email == e.Email
+            );
             if (ExistingEmail != null)
             {
                 response.Success = false;
@@ -104,7 +111,9 @@ namespace Organisation_WebAPI.Services.AuthRepo
             OtpGenerator otpGenerator = new OtpGenerator();
             string otp = otpGenerator.GenerateOtp();
 
-            DateTimeOffset indianTime = DateTimeOffset.UtcNow.ToOffset(TimeZoneInfo.FindSystemTimeZoneById("India Standard Time").BaseUtcOffset);
+            DateTimeOffset indianTime = DateTimeOffset.UtcNow.ToOffset(
+                TimeZoneInfo.FindSystemTimeZoneById("India Standard Time").BaseUtcOffset
+            );
             DateTimeOffset otpExpiration = indianTime.AddMinutes(2);
 
             CreatePasswordHash(model.Password, out byte[] passwordHash, out byte[] passwordSalt);
@@ -151,10 +160,13 @@ namespace Organisation_WebAPI.Services.AuthRepo
                             ManagerID = model.ManagerID,
                             User = user
                         };
-                        var employeeMessage = new Message(new string[] { model.Email }, "Welcome to Stint360 - Employee Registration", 
-                            $"Dear {model.UserName},\n\nCongratulations! You have been registered as an employee in Stint360.\n\nYour " +
-                            $"credentials:\nUsername: {model.UserName}\nPassword: {model.Password}\n\nPlease keep this information confidential" +
-                            $".\n\nThank you and welcome to Stint360!");
+                        var employeeMessage = new Message(
+                            new string[] { model.Email },
+                            "Welcome to Stint360 - Employee Registration",
+                            $"Dear {model.UserName},\n\nCongratulations! You have been registered as an employee in Stint360.\n\nYour "
+                                + $"credentials:\nUsername: {model.UserName}\nPassword: {model.Password}\n\nPlease keep this information confidential"
+                                + $".\n\nThank you and welcome to Stint360!"
+                        );
 
                         _emailSender.SendEmail(employeeMessage);
 
@@ -171,12 +183,15 @@ namespace Organisation_WebAPI.Services.AuthRepo
                             transaction.Rollback();
                             return response;
                         }
-                        var existingManagers = await _dbContext.Managers.FirstOrDefaultAsync(m => m.DepartmentID == model.DepartmentID);
+                        var existingManagers = await _dbContext.Managers.FirstOrDefaultAsync(
+                            m => m.DepartmentID == model.DepartmentID
+                        );
 
                         if (existingManagers != null)
                         {
                             response.Success = false;
-                            response.Message = "Department ID is already associated with a manager.";
+                            response.Message =
+                                "Department ID is already associated with a manager.";
                             transaction.Rollback();
                             return response;
                         }
@@ -195,10 +210,13 @@ namespace Organisation_WebAPI.Services.AuthRepo
                             User = user
                         };
 
-                        var managerMessage = new Message(new string[] { model.Email }, "Welcome to Stint360 - Manager Registration",
-                            $"Dear {model.UserName},\n\nCongratulations! You have been registered as a manager in Stint360." +
-                            $"\n\nYour credentials:\nUsername: {model.UserName}\nPassword: {model.Password}\n\nPlease keep this " +
-                            $"information confidential.\n\nThank you and welcome to Stint360!");
+                        var managerMessage = new Message(
+                            new string[] { model.Email },
+                            "Welcome to Stint360 - Manager Registration",
+                            $"Dear {model.UserName},\n\nCongratulations! You have been registered as a manager in Stint360."
+                                + $"\n\nYour credentials:\nUsername: {model.UserName}\nPassword: {model.Password}\n\nPlease keep this "
+                                + $"information confidential.\n\nThank you and welcome to Stint360!"
+                        );
 
                         _emailSender.SendEmail(managerMessage);
 
@@ -214,12 +232,9 @@ namespace Organisation_WebAPI.Services.AuthRepo
                     await _dbContext.SaveChangesAsync();
                     transaction.Commit();
 
-                  
                     response.Data = "User Registered Successfully";
                     return response;
                 }
-
-
                 catch (Exception ex)
                 {
                     // Handle exception if needed
@@ -228,16 +243,8 @@ namespace Organisation_WebAPI.Services.AuthRepo
                     response.Message = "An error occurred during registration.";
                     return response;
                 }
-
-
-
             }
-        
         }
-
-
-
-
 
         public async Task<ServiceResponse<string>> Verify(string email, string otp)
         {
@@ -249,7 +256,9 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 response.Message = "Invalid email address.";
                 return response;
             }
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email!.ToLower() == email.ToLower());
+            var user = await _dbContext.Users.FirstOrDefaultAsync(
+                u => u.Email!.ToLower() == email.ToLower()
+            );
             if (user != null)
             {
                 if (user.OtpResendCount >= 3)
@@ -260,7 +269,6 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 }
                 if (user.Otp == otp)
                 {
-
                     if (user.OtpExpiration > DateTimeOffset.UtcNow)
                     {
                         user.Otp = null;
@@ -280,23 +288,16 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 {
                     response.Success = false;
                     response.Message = "Invalid OTP , Please try again";
-
                 }
-
             }
             else
             {
-
                 response.Success = false;
                 response.Message = "Invalid Email , Please try again";
-
             }
 
             return response;
         }
-
-
-
 
         public async Task<bool> UserExists(string username)
         {
@@ -306,10 +307,13 @@ namespace Organisation_WebAPI.Services.AuthRepo
             }
             return false;
         }
+
         public async Task<ServiceResponse<string>> ForgotPassword(string email)
         {
             var response = new ServiceResponse<string>();
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email!.ToLower() == email.ToLower());
+            var user = await _dbContext.Users.FirstOrDefaultAsync(
+                u => u.Email!.ToLower() == email.ToLower()
+            );
             if (!IsEmailValid(email))
             {
                 response.Success = false;
@@ -322,13 +326,14 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 response.Message = "Email does not exists";
                 return response;
             }
-       
 
             OtpGenerator otpGenerator = new OtpGenerator();
             string otp = otpGenerator.GenerateOtp();
 
             // Get the current Indian time
-            DateTimeOffset indianTime = DateTimeOffset.UtcNow.ToOffset(TimeZoneInfo.FindSystemTimeZoneById("India Standard Time").BaseUtcOffset);
+            DateTimeOffset indianTime = DateTimeOffset.UtcNow.ToOffset(
+                TimeZoneInfo.FindSystemTimeZoneById("India Standard Time").BaseUtcOffset
+            );
 
             // Add the expiration time in minutes
             DateTimeOffset otpExpiration = indianTime.AddMinutes(3);
@@ -338,17 +343,18 @@ namespace Organisation_WebAPI.Services.AuthRepo
             user.IsVerified = false;
             await _dbContext.SaveChangesAsync();
 
-            var otpMessage = new Message(new string[] { email  }, "Stint360 - Password Reset OTP",
-               $"Dear {email},\n\nYou have requested a password reset for your Stint360 account.\n\nYour OTP (One-Time Password) is: {otp}" +
-               $"\n\nPlease use this OTP to reset your password within the specified time limit.\n\nIf you did not request this password reset, " +
-               $"please ignore this message.\n\nThank you!");
+            var otpMessage = new Message(
+                new string[] { email },
+                "Stint360 - Password Reset OTP",
+                $"Dear {email},\n\nYou have requested a password reset for your Stint360 account.\n\nYour OTP (One-Time Password) is: {otp}"
+                    + $"\n\nPlease use this OTP to reset your password within the specified time limit.\n\nIf you did not request this password reset, "
+                    + $"please ignore this message.\n\nThank you!"
+            );
 
             _emailSender.SendEmail(otpMessage);
             response.Data = "Please check your email for OTP.";
             return response;
         }
-
-
 
         public async Task<ServiceResponse<ResetPasswordDto>> ResetPassword(ResetPasswordDto request)
         {
@@ -356,8 +362,9 @@ namespace Organisation_WebAPI.Services.AuthRepo
 
             if (request.Email is not null)
             {
-
-                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email!.ToLower() == request.Email.ToLower());
+                var user = await _dbContext.Users.FirstOrDefaultAsync(
+                    u => u.Email!.ToLower() == request.Email.ToLower()
+                );
 
                 if (user != null)
                 {
@@ -370,14 +377,17 @@ namespace Organisation_WebAPI.Services.AuthRepo
 
                     if (user.OtpExpiration > DateTimeOffset.UtcNow)
                     {
-                        CreatePasswordHash(request.NewPassword, out byte[] passwordHash, out byte[] passwordSalt);
+                        CreatePasswordHash(
+                            request.NewPassword,
+                            out byte[] passwordHash,
+                            out byte[] passwordSalt
+                        );
                         user.PasswordHash = passwordHash;
                         user.PasswordSalt = passwordSalt;
                         user.Otp = null;
                         user.OtpExpiration = null;
                         await _dbContext.SaveChangesAsync();
                         response.Message = "Password changed successfully.";
-
                     }
                     else
                     {
@@ -385,14 +395,12 @@ namespace Organisation_WebAPI.Services.AuthRepo
                         response.Message = "Your OTP is expired.";
                         return response;
                     }
-
                 }
                 else
                 {
                     response.Success = false;
                     response.Message = "Invalid Email Address.";
                 }
-
             }
             else
             {
@@ -401,7 +409,6 @@ namespace Organisation_WebAPI.Services.AuthRepo
             }
 
             return response;
-
         }
 
         public async Task<ServiceResponse<GetUserDto>> GetUserById(int id)
@@ -415,7 +422,8 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
-            response.Data = _mapper.Map<GetUserDto>(user); ;
+            response.Data = _mapper.Map<GetUserDto>(user);
+            ;
             return response;
         }
 
@@ -433,11 +441,11 @@ namespace Organisation_WebAPI.Services.AuthRepo
 
             if (user.Role == UserRole.Employee)
             {
-
-                var associatedEmployees = await _dbContext.Employees.Where(e => e.UserID == id).ToListAsync();
+                var associatedEmployees = await _dbContext.Employees
+                    .Where(e => e.UserID == id)
+                    .ToListAsync();
                 _dbContext.Employees.RemoveRange(associatedEmployees);
                 _dbContext.Users.Remove(user);
-
             }
             else if (user.Role == UserRole.Manager)
             {
@@ -457,7 +465,6 @@ namespace Organisation_WebAPI.Services.AuthRepo
             await _dbContext.SaveChangesAsync();
             response.Data = "User deleted successfully";
             return response;
-
         }
 
         public async Task<ServiceResponse<List<GetUserDto>>> GetAllUsers()
@@ -469,16 +476,18 @@ namespace Organisation_WebAPI.Services.AuthRepo
             response.Message = "Users retrieved successfully";
 
             return response;
-
         }
 
-
-        public async Task<ServiceResponse<string>> AppointNewManager(int managerId, NewManagerDto model)
+        public async Task<ServiceResponse<string>> AppointNewManager(
+            int managerId,
+            NewManagerDto model
+        )
         {
             var response = new ServiceResponse<string>();
 
-            var manager = await _dbContext.Managers.Include(m => m.User)
-                                                  .FirstOrDefaultAsync(m => m.ManagerId == managerId);
+            var manager = await _dbContext.Managers
+                .Include(m => m.User)
+                .FirstOrDefaultAsync(m => m.ManagerId == managerId);
 
             if (manager == null)
             {
@@ -499,14 +508,13 @@ namespace Organisation_WebAPI.Services.AuthRepo
 
             CreatePasswordHash(model.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
-
             // Update user properties
             user.UserName = model.UserName;
             user.Email = model.Email;
             user.IsVerified = true;
             user.PasswordHash = passwordHash;
             user.PasswordSalt = passwordSalt;
-           
+
             // Update other user fields as needed
 
             // Update manager properties
@@ -524,13 +532,15 @@ namespace Organisation_WebAPI.Services.AuthRepo
 
             // Send email with updated information
 
-            var managerMessage = new Message(new string[] { model.Email }, "Welcome to Stint360 - Manager Registration",
-                $"Dear {model.UserName},\n\nCongratulations! You have been registered as a manager in Stint360." +
-                $"\n\nYour credentials:\nUsername: {model.UserName}\nPassword: {model.Password}\n\nPlease keep this " +
-                $"information confidential.\n\nThank you and welcome to Stint360!");
+            var managerMessage = new Message(
+                new string[] { model.Email },
+                "Welcome to Stint360 - Manager Registration",
+                $"Dear {model.UserName},\n\nCongratulations! You have been registered as a manager in Stint360."
+                    + $"\n\nYour credentials:\nUsername: {model.UserName}\nPassword: {model.Password}\n\nPlease keep this "
+                    + $"information confidential.\n\nThank you and welcome to Stint360!"
+            );
 
             _emailSender.SendEmail(managerMessage);
-
 
             response.Data = "Manager updated successfully";
             return response;
@@ -547,7 +557,9 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email!.ToLower() == email.ToLower());
+            var user = await _dbContext.Users.FirstOrDefaultAsync(
+                u => u.Email!.ToLower() == email.ToLower()
+            );
 
             if (user == null)
             {
@@ -567,7 +579,9 @@ namespace Organisation_WebAPI.Services.AuthRepo
             string otp = otpGenerator.GenerateOtp();
 
             // Get the current Indian time
-            DateTimeOffset indianTime = DateTimeOffset.UtcNow.ToOffset(TimeZoneInfo.FindSystemTimeZoneById("India Standard Time").BaseUtcOffset);
+            DateTimeOffset indianTime = DateTimeOffset.UtcNow.ToOffset(
+                TimeZoneInfo.FindSystemTimeZoneById("India Standard Time").BaseUtcOffset
+            );
 
             // Add the expiration time in minutes
             DateTimeOffset otpExpiration = indianTime.AddMinutes(3);
@@ -579,15 +593,17 @@ namespace Organisation_WebAPI.Services.AuthRepo
 
             await _dbContext.SaveChangesAsync();
 
-            var message = new Message(new string[] { email }, "OTP Resent", $"This is your new OTP: {otp}.\n\nIt will expire at {otpExpiration} IST.");
+            var message = new Message(
+                new string[] { email },
+                "OTP Resent",
+                $"This is your new OTP: {otp}.\n\nIt will expire at {otpExpiration} IST."
+            );
             _emailSender.SendEmail(message);
 
             response.Success = true;
             response.Message = "OTP has been resent.";
             return response;
         }
-
-
 
         public async Task<bool> EmailExists(string email)
         {
@@ -597,7 +613,12 @@ namespace Organisation_WebAPI.Services.AuthRepo
             }
             return false;
         }
-        private static void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
+
+        private static void CreatePasswordHash(
+            string password,
+            out byte[] passwordHash,
+            out byte[] passwordSalt
+        )
         {
             using (var hmac = new System.Security.Cryptography.HMACSHA512())
             {
@@ -606,7 +627,11 @@ namespace Organisation_WebAPI.Services.AuthRepo
             }
         }
 
-        private static bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
+        private static bool VerifyPasswordHash(
+            string password,
+            byte[] passwordHash,
+            byte[] passwordSalt
+        )
         {
             using (var hmac = new System.Security.Cryptography.HMACSHA512(passwordSalt))
             {
@@ -625,8 +650,5 @@ namespace Organisation_WebAPI.Services.AuthRepo
 
             return isValid;
         }
-
-
-
     }
 }
