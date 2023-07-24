@@ -1,16 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 using EmailService;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Organisation_WebAPI.Data;
-using Organisation_WebAPI.Dtos.EmployeeDto;
 using Organisation_WebAPI.Dtos.EmployeeTaskDto;
 using Organisation_WebAPI.InputModels;
-using Organisation_WebAPI.Models;
 using Organisation_WebAPI.Services.Pagination;
 using Organisation_WebAPI.ViewModels;
 
@@ -39,22 +33,23 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             _paginationServices = paginationServices; // Injects pagination service instance
         }
 
-        public async Task<ServiceResponse<List<GetEmployeeTaskDto>>> AddEmployeeTask(
-            [FromBody] AddEmployeeTaskDto addEmployeeTask
-        )
+        //Adds a new employeeTask to the database and send  email to the employee 
+        //who has been assigned by the task
+        public async Task<ServiceResponse<List<GetEmployeeTaskDto>>> AddEmployeeTask([FromBody] AddEmployeeTaskDto addEmployeeTask )
         {
             var serviceResponse = new ServiceResponse<List<GetEmployeeTaskDto>>();
-
             var ExistingEmployee = await _context.Employees.FirstOrDefaultAsync(
                 e => e.EmployeeID == addEmployeeTask.EmployeeId
             );
 
             try
             {
+                //Check whether the employeeId exists in the table
                 var employee = await _context.Employees.FirstOrDefaultAsync(
                     u => u.EmployeeID == addEmployeeTask.EmployeeId
                 );
 
+                //If employee is null throw exception of employee not found
                 if (employee is null)
                 {
                     throw new Exception($"Employee not found");
@@ -66,6 +61,7 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
 
                 await _context.SaveChangesAsync();
 
+                //Sends email to the corresponding employee about the new task assignment
                 var employeeMessage = new Message(
                     new string[] { employee.Email },
                     "New Task Assignment",
@@ -121,11 +117,11 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             try
             {
                 //Fetch all records of employeeTasks from database
-                var dbEmployeeTasks = await _context.EmployeeTasks.ToListAsync();
+                var employeeTasks = await _context.EmployeeTasks.ToListAsync();
 
                 //Calculate DueDate deadline with currentDate
                 var currentDate = DateTime.Today;
-                foreach (var employeeTask in dbEmployeeTasks)
+                foreach (var employeeTask in employeeTasks)
                 {
                     DateTime TaskDueDate = (DateTime)employeeTask.TaskDueDate!;
                     DateTime dueDate = TaskDueDate.Date;
@@ -136,7 +132,7 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                     }
                 }
                 await _context.SaveChangesAsync();
-                serviceResponse.Data = dbEmployeeTasks
+                serviceResponse.Data = employeeTasks
                     .Select(c => _mapper.Map<GetEmployeeTaskDto>(c))
                     .ToList();
             }
@@ -157,6 +153,8 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                 var dbEmployeeTask = await _context.EmployeeTasks.FirstOrDefaultAsync(
                     c => c.TaskID == id
                 );
+
+                //if employeeTask is null throw exception of employeeTask is not found
                 if (dbEmployeeTask is null)
                     throw new Exception($"EmployeeTask with id '{id}' not found");
 
@@ -171,10 +169,8 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             return serviceResponse;
         }
 
-        public async Task<ServiceResponse<GetEmployeeTaskDto>> UpdateEmployeeTask(
-            UpdateEmployeeTaskDto updateEmployeeTask,
-            int id
-        )
+        //Update EmployeeTask with corresponding employeeTaskId
+        public async Task<ServiceResponse<GetEmployeeTaskDto>> UpdateEmployeeTask( UpdateEmployeeTaskDto updateEmployeeTask,int id )
         {
             var serviceResponse = new ServiceResponse<GetEmployeeTaskDto>();
             try
@@ -182,6 +178,8 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                 var employeeTask = await _context.EmployeeTasks.FirstOrDefaultAsync(
                     c => c.TaskID == id
                 );
+
+                //if employeeTask is null throw exception of employeeTask is not found
                 if (employeeTask is null)
                     throw new Exception($"EmployeeTask with id '{id}' not found");
 
@@ -189,11 +187,13 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                     e => e.EmployeeID == updateEmployeeTask.EmployeeId
                 );
 
+                //if employee is null throw exception of employee is not found
                 if (ExistingEmployee is null)
                     throw new Exception(
                         $"Employee with id '{updateEmployeeTask.EmployeeId}' not found"
                     );
 
+                //Update employeeTask details 
                 employeeTask.TaskName = updateEmployeeTask.TaskName;
                 employeeTask.TaskDueDate = updateEmployeeTask.TaskDueDate;
                 employeeTask.TaskDescription = updateEmployeeTask.TaskDescription;
@@ -214,10 +214,9 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             return serviceResponse;
         }
 
-        public async Task<ServiceResponse<GetEmployeeTaskDto>> UpdateEmployeeTaskStatus(
-            UpdateEmployeeTaskStatusDto updateEmployeeTaskStatus,
-            int id
-        )
+        //Update employee task status based on employeeTaskId and if the task is completed
+        // mail will be sent to the corresponding manager
+        public async Task<ServiceResponse<GetEmployeeTaskDto>> UpdateEmployeeTaskStatus( UpdateEmployeeTaskStatusDto updateEmployeeTaskStatus,int id)
         {
             var serviceResponse = new ServiceResponse<GetEmployeeTaskDto>();
             try
@@ -226,6 +225,7 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                     c => c.TaskID == id
                 );
 
+                //if employeeTask is null throw exception of employeeTask is not found
                 if (employeeTask is null)
                     throw new Exception($"Employee task with id '{id}' not found");
 
@@ -233,6 +233,7 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                     e => e.EmployeeID == updateEmployeeTaskStatus.EmployeeId
                 );
 
+                //if employee is null throw exception of employee is not found
                 if (existingEmployee is null)
                     throw new Exception(
                         $"Employee with id '{updateEmployeeTaskStatus.EmployeeId}' not found"
@@ -242,6 +243,7 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                     m => m.ManagerId == existingEmployee.ManagerID
                 );
 
+                //if manager is null throw exception of manager is not found with employeeId
                 if (manager is null)
                     throw new Exception(
                         $"Manager not found for employee with id '{updateEmployeeTaskStatus.EmployeeId}'"
@@ -253,6 +255,7 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
 
                 await _context.SaveChangesAsync();
 
+                //if updateEmployeeTaskStatus is completed then  mail will be sent to the corresponding manager 
                 if (updateEmployeeTaskStatus.TaskStatus == Status.Completed)
                 {
                     var managerMessage = new Message(
@@ -277,16 +280,29 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             return serviceResponse;
         }
 
-        public async Task<
-            ServiceResponse<List<GetEmployeeTaskDto>>
-        > GetEmployeeOngoingTaskByEmployeeId(int id)
+        //Retrieves all InProgress Tasks from database
+        public async Task<ServiceResponse<List<GetEmployeeTaskDto>>> GetEmployeeInProgressTaskByEmployeeId(int id)
         {
             var serviceResponse = new ServiceResponse<List<GetEmployeeTaskDto>>();
             try
-            {
+            {   
+                 var employee = await _context.Employees.FirstOrDefaultAsync(
+                    c => c.EmployeeID == id
+                );
+
+                //if employee is null return service response as  employee is not found
+                if (employee == null)
+                {
+                    serviceResponse.Success = false;
+                    serviceResponse.Message = "Employee not found";
+                    return serviceResponse;
+                }
+
                 var dbEmployeeTasks = await _context.EmployeeTasks
                     .Where(e => e.EmployeeId == id && e.TaskStatus == Status.InProgress)
                     .ToListAsync();
+                
+                //Checks whether the current date has reached dueDate
                 var currentDate = DateTime.Today;
                 foreach (var employeeTask in dbEmployeeTasks)
                 {
@@ -313,13 +329,23 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             return serviceResponse;
         }
 
-        public async Task<
-            ServiceResponse<List<GetEmployeeTaskDto>>
-        > GetEmployeeCompletedTaskByEmployeeId(int id)
+        //Retrieves all completed Tasks from database by employeeId
+        public async Task<ServiceResponse<List<GetEmployeeTaskDto>>> GetEmployeeCompletedTaskByEmployeeId(int id)
         {
             var serviceResponse = new ServiceResponse<List<GetEmployeeTaskDto>>();
             try
-            {
+            {   
+                 var employee = await _context.Employees.FirstOrDefaultAsync(
+                    c => c.EmployeeID == id
+                );
+                
+                //if employee is null return service response as  employee is not found
+                if (employee == null)
+                {
+                    serviceResponse.Success = false;
+                    serviceResponse.Message = "Employee not found";
+                    return serviceResponse;
+                }
                 var dbEmployeeTasks = await _context.EmployeeTasks
                     .Where(e => e.EmployeeId == id && e.TaskStatus == Status.Completed)
                     .ToListAsync();
@@ -336,13 +362,24 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             return serviceResponse;
         }
 
-        public async Task<
-            ServiceResponse<List<GetEmployeeTaskDto>>
-        > GetEmployeePendingTaskByEmployeeId(int id)
+        //Retrieves all Pending Tasks from database by employeeId
+        public async Task<ServiceResponse<List<GetEmployeeTaskDto>>> GetEmployeePendingTaskByEmployeeId(int id)
         {
             var serviceResponse = new ServiceResponse<List<GetEmployeeTaskDto>>();
             try
-            {
+            {   
+                var employee = await _context.Employees.FirstOrDefaultAsync(
+                    c => c.EmployeeID == id
+                );
+
+                //if employee is null return service response as  employee is not found
+                if (employee == null)
+                {
+                    serviceResponse.Success = false;
+                    serviceResponse.Message = "Employee not found";
+                    return serviceResponse;
+                }
+
                 var dbEmployeeTasks = await _context.EmployeeTasks
                     .Where(e => e.EmployeeId == id && e.TaskStatus == Status.Pending)
                     .ToListAsync();
@@ -359,9 +396,8 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             return serviceResponse;
         }
 
-        public async Task<
-            ServiceResponse<PaginationResultVM<GetEmployeeTaskDto>>
-        > GetAllEmployeeTasksByEmployeeId(
+        //Retrieves all Employee Tasks from database by employeeId
+        public async Task<ServiceResponse<PaginationResultVM<GetEmployeeTaskDto>>> GetAllEmployeeTasksByEmployeeId(
             int managerid,
             int employeeid,
             PaginationInput paginationInput
@@ -374,13 +410,15 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                     c => c.EmployeeID == employeeid
                 );
 
+                //if employee is null return service response as  employee is not found
                 if (employee == null)
                 {
                     serviceResponse.Success = false;
                     serviceResponse.Message = "Employee not found";
                     return serviceResponse;
                 }
-
+            
+                //if managerId  is null return service response as  Unauthorized
                 if (employee.ManagerID != managerid)
                 {
                     serviceResponse.Success = false;
@@ -391,7 +429,8 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                 var dbEmployeeTasks = await _context.EmployeeTasks
                     .Where(c => c.EmployeeId == employeeid)
                     .ToListAsync();
-
+                
+                //if employeeTaskCount is zero throw exception of employee has no tasks
                 if (dbEmployeeTasks.Count == 0)
                     throw new Exception($"Employee has no tasks.");
 
@@ -411,15 +450,26 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             return serviceResponse;
         }
 
-        public async Task<ServiceResponse<List<GetEmployeeTaskDto>>> GetEmployeeNewTaskByEmployeeId(
-            int id
-        )
+        //Retrieves all New Tasks from database by employeeId
+        public async Task<ServiceResponse<List<GetEmployeeTaskDto>>> GetEmployeeNewTaskByEmployeeId( int id )
         {
             var serviceResponse = new ServiceResponse<List<GetEmployeeTaskDto>>();
             try
-            {
-                var currentDate = DateTime.Now;
-                Console.WriteLine(currentDate);
+            {   
+                  var employee = await _context.Employees.FirstOrDefaultAsync(
+                    c => c.EmployeeID == id
+                );
+
+                //if employee is null return service response as  employee is not found
+                if (employee == null)
+                {
+                    serviceResponse.Success = false;
+                    serviceResponse.Message = "Employee not found";
+                    return serviceResponse;
+                }
+
+                //Checks whether the current date has reached due date
+                var currentDate = DateTime.Now;;
                 var dbEmployeeTasks = await _context.EmployeeTasks
                     .Where(t => t.EmployeeId == id && t.TaskStatus == Status.New)
                     .ToListAsync();
@@ -452,13 +502,23 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
             return serviceResponse;
         }
 
-        public async Task<ServiceResponse<int>> CalculateNewEmployeeTasksByEmployeeId(
-            int employeeId
-        )
+        //Retrieves count of  New Tasks from database by employeeId
+        public async Task<ServiceResponse<int>> CalculateNewEmployeeTasksByEmployeeId( int employeeId )
         {
             var serviceResponse = new ServiceResponse<int>();
             try
-            {
+            {   
+                var employee = await _context.Employees.FirstOrDefaultAsync(
+                    c => c.EmployeeID == employeeId
+                );
+
+                //if employee is null return service response as  employee is not found
+                if (employee == null)
+                {
+                    serviceResponse.Success = false;
+                    serviceResponse.Message = "Employee not found";
+                    return serviceResponse;
+                }
                 var newTasksCount = await _context.EmployeeTasks.CountAsync(
                     e => e.EmployeeId == employeeId && e.TaskStatus == Status.New
                 );

@@ -1,16 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using AutoMapper;
 using EmailService;
 using Microsoft.EntityFrameworkCore;
 using Organisation_WebAPI.Data;
 using Organisation_WebAPI.Dtos.EmployeeDto;
-using Organisation_WebAPI.Dtos.ManagerDto;
 using Organisation_WebAPI.InputModels;
-using Organisation_WebAPI.Models;
 using Organisation_WebAPI.Services.Pagination;
 using Organisation_WebAPI.ViewModels;
 

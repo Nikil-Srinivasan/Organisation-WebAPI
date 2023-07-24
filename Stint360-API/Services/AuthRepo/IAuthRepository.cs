@@ -1,8 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Organisation_WebAPI.Dtos.Admin;
+﻿using Organisation_WebAPI.Dtos.Admin;
 using Organisation_WebAPI.Dtos.ManagerDto;
-using Organisation_WebAPI.Models;
-using System.Security.Claims;
+
 
 namespace Organisation_WebAPI.Services.AuthRepo
 {

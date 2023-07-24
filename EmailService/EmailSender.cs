@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
 using MimeKit;
 using MailKit.Net.Smtp;
 
@@ -18,6 +14,7 @@ namespace EmailService
             _emailConfig = emailConfig;
         }
 
+        // Send an email message using the provided Message object.
         public void SendEmail(Message message)
         {
             var emailMessage = CreateEmailMessage(message);
@@ -25,7 +22,7 @@ namespace EmailService
             Send(emailMessage);
         }
 
-
+        // Create a new MimeMessage to represent the email.
         private MimeMessage CreateEmailMessage(Message message)
         {
             var emailMessage = new MimeMessage();
@@ -37,6 +34,7 @@ namespace EmailService
             return emailMessage;
         }
 
+        // Create a new SmtpClient to send the email.
         private void Send(MimeMessage mailMessage)
         {
             using (var client = new SmtpClient())

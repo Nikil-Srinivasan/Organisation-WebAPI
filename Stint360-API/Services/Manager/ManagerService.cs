@@ -1,15 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Organisation_WebAPI.Data;
 using Organisation_WebAPI.Dtos.EmployeeDto;
 using Organisation_WebAPI.Dtos.ManagerDto;
 using Organisation_WebAPI.InputModels;
-using Organisation_WebAPI.Models;
 using Organisation_WebAPI.Services.Pagination;
 using Organisation_WebAPI.ViewModels;
 
@@ -28,7 +23,7 @@ namespace Organisation_WebAPI.Services.Managers
             IPaginationServices<GetManagerDto, GetManagerDto> paginationServices,
             IHttpContextAccessor httpContextAccessor
         )
-        {
+        { 
             _mapper = mapper;
             _context = context;
             _paginationServices = paginationServices;
@@ -40,6 +35,7 @@ namespace Organisation_WebAPI.Services.Managers
                 _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
             );
 
+        // Adds a new Manager to the database
         public async Task<ServiceResponse<List<GetManagerDto>>> AddManager(AddManagerDto newManager)
         {
             var serviceResponse = new ServiceResponse<List<GetManagerDto>>();
@@ -60,12 +56,16 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
+        //Delete a Manager based on managerId
         public async Task<ServiceResponse<List<GetManagerDto>>> DeleteManager(int id)
         {
             var serviceResponse = new ServiceResponse<List<GetManagerDto>>();
             try
-            {
+            {   
+                //Fetch manager record based on managerId
                 var manager = await _context.Managers.FirstOrDefaultAsync(c => c.ManagerId == id);
+
+                //If manager is null throw exception of managerId not found
                 if (manager is null)
                     throw new Exception($"Manager with id '{id}' not found");
 
@@ -83,6 +83,7 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
+        //Retrieves all managers from database
         public async Task<ServiceResponse<PaginationResultVM<GetManagerDto>>> GetAllManagers(
             PaginationInput paginationInput
         )
@@ -116,17 +117,14 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
-        public async Task<
-            ServiceResponse<List<ManagerDepartmentDto>>
-        > GetAllDepartmentsAssociatedWithManager()
+        //Retrieves all departments from database based on appointed managers
+        public async Task<ServiceResponse<List<ManagerDepartmentDto>>> GetAllDepartmentsAssociatedWithManager()
         {
             var serviceResponse = new ServiceResponse<List<ManagerDepartmentDto>>();
             try
             {
                 var dbManagers = await _context.Managers.ToListAsync();
-                var managerDepartmentList = dbManagers
-                    .Select(
-                        m =>
+                var managerDepartmentList = dbManagers.Select(m =>
                             new ManagerDepartmentDto
                             {
                                 ManagerId = m.ManagerId,
@@ -149,15 +147,18 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
+        //Retrieve an manager record from database based on departmentId
         public async Task<ServiceResponse<GetManagerDto>> GetManagerByDepartmentId(int departmentId)
         {
             var serviceResponse = new ServiceResponse<GetManagerDto>();
             try
-            {
+            {   
+                //Fetch manager record based on departmentId
                 var manager = await _context.Managers
                     .Include(m => m.Department)
                     .FirstOrDefaultAsync(m => m.DepartmentID == departmentId);
 
+                //If manager is null return service response as false with message
                 if (manager == null)
                 {
                     serviceResponse.Success = false;
@@ -178,13 +179,13 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
-        public async Task<
-            ServiceResponse<GetEmployeesAndManagerDto>
-        > GetEmployeesAndManagerByDepartmentId(int departmentId)
+        //Retrieves all employees and manager based on departmentId
+        public async Task<ServiceResponse<GetEmployeesAndManagerDto>> GetEmployeesAndManagerByDepartmentId(int departmentId)
         {
             var serviceResponse = new ServiceResponse<GetEmployeesAndManagerDto>();
             try
-            {
+            {   
+                // Retrieve manager with the specified departmentId including their associated department and employees.
                 var manager = await _context.Managers
                     .Include(m => m.Department)
                     .Include(m => m.Employees)
@@ -195,6 +196,7 @@ namespace Organisation_WebAPI.Services.Managers
 
                 var managerDto = _mapper.Map<GetEmployeesAndManagerDto>(manager);
 
+                //If manager is null throw exception of managerId not found
                 if (manager == null)
                 {
                     serviceResponse.Success = false;
@@ -218,18 +220,21 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
+        //Retrieve manager from database by managerId
         public async Task<ServiceResponse<GetManagerDto>> GetManagerById(int id)
         {
             var serviceResponse = new ServiceResponse<GetManagerDto>();
             try
             {
-                var dbManager = await _context.Managers
+                var manager = await _context.Managers
                     .Include(m => m.Department) // Eagerly load the associated department
                     .FirstOrDefaultAsync(m => m.ManagerId == id);
-                if (dbManager is null)
+
+                //If manager is null throw exception of employeeId not found    
+                if (manager is null)
                     throw new Exception($"Manager with id '{id}' not found");
 
-                serviceResponse.Data = _mapper.Map<GetManagerDto>(dbManager);
+                serviceResponse.Data = _mapper.Map<GetManagerDto>(manager);
                 return serviceResponse;
             }
             catch (Exception ex)
@@ -240,19 +245,19 @@ namespace Organisation_WebAPI.Services.Managers
             return serviceResponse;
         }
 
-        public async Task<ServiceResponse<GetManagerDto>> UpdateManager(
-            UpdateManagerDto updatedManager,
-            int id
-        )
+        //Update Manager record based on managerId
+        public async Task<ServiceResponse<GetManagerDto>> UpdateManager(UpdateManagerDto updatedManager,int id)
         {
             var serviceResponse = new ServiceResponse<GetManagerDto>();
             try
             {
                 var manager = await _context.Managers.FirstOrDefaultAsync(c => c.ManagerId == id);
 
+                //If manager is null throw exception of managerId not found
                 if (manager is null)
                     throw new Exception($"Manager with id '{id}' not found");
-
+                
+                //Update the manager details to the current manager
                 manager.ManagerName = updatedManager.ManagerName;
                 manager.ManagerSalary = updatedManager.ManagerSalary;
                 manager.ManagerAge = updatedManager.ManagerAge;

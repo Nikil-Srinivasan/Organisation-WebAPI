@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Azure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Organisation_WebAPI.Dtos.EmployeeDto;
@@ -24,6 +19,7 @@ namespace Organisation_WebAPI.Controllers
              _managerService = managerService;
         }
 
+        //Endpoint to get All managers from database by pagination
         [HttpPost("GetAllManagers")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<ActionResult<ServiceResponse<GetManagerDto>>> GetManagers(PaginationInput paginationInput)
@@ -36,6 +32,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to retrieve manager and employees by departmentId
         [HttpGet("GetEmployeesAndManagerByDepartmentId")]
         public async Task<ActionResult<ServiceResponse<GetEmployeesAndManagerDto>>> GetEmployeesAndManagerByDepartmentId(int id)
         {
@@ -48,7 +45,7 @@ namespace Organisation_WebAPI.Controllers
         }
 
 
-
+        //Endpoint to retrieve a manager by managerId
         [HttpGet("GetManagerById")]
         public async Task<ActionResult<ServiceResponse<GetManagerDto>>> GetManagerById(int id)
         {
@@ -60,6 +57,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to get manager by departmentId
         [HttpGet("GetManagerByDepartmentId")]
         public async Task<ActionResult<ServiceResponse<GetManagerDto>>> GetManagerByDepartmentId(int id)
         {
@@ -71,6 +69,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to update a manager by managerId
         [HttpPut("UpdateManager")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<ActionResult<ServiceResponse<GetManagerDto>>> UpdateManager(UpdateManagerDto updatedManager,int id){
@@ -82,6 +81,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to delete a manager by managerId
         [HttpDelete("DeleteManager")]
         [Authorize(Roles = nameof(UserRole.Admin))]
         public async Task<ActionResult<ServiceResponse<GetManagerDto>>> DeleteManager(int id){
@@ -93,6 +93,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to retrieve all departments  associated with manager
         [HttpGet("GetAllDepartmentsAssociatedWithManager")]
         public async Task<ActionResult<ServiceResponse<string>>> GetAllDepartmentsAssociatedWithManager()
         {

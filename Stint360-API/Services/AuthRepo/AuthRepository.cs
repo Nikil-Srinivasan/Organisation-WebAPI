@@ -1,21 +1,12 @@
 ﻿using AutoMapper;
-using Azure;
 using EmailService;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 using Organisation_WebAPI.Data;
 using Organisation_WebAPI.Dtos.Admin;
-using Organisation_WebAPI.Dtos.DepartmentDto;
 using Organisation_WebAPI.Dtos.ManagerDto;
-using Organisation_WebAPI.Models;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text.RegularExpressions;
-using static System.Net.WebRequestMethods;
+
 
 namespace Organisation_WebAPI.Services.AuthRepo
 {
@@ -47,17 +38,22 @@ namespace Organisation_WebAPI.Services.AuthRepo
             _mapper = mapper;
         }
 
+        //Login method for user and generate token if username and password matches
         public async Task<ServiceResponse<string>> Login(string username, string password)
         {
             var response = new ServiceResponse<string>();
             var user = await _dbContext.Users.FirstOrDefaultAsync(
                 u => u.UserName!.ToLower() == username.ToLower()
             );
+
+            //If user is null  response message as User not found
             if (user == null)
             {
                 response.Success = false;
                 response.Message = "User Not Found";
             }
+
+            //If user is not null verify password and if returns false set response as Incorrect Password 
             else if (!VerifyPasswordHash(password, user.PasswordHash!, user.PasswordSalt!))
             {
                 response.Success = false;
@@ -65,6 +61,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
             }
             else
             {
+                //If the manager is appointed generate JWT Token if not return false
                 if (user.Role == UserRole.Manager)
                 {
                     var manager = await _dbContext.Managers.FindAsync(user.UserID);
@@ -80,10 +77,12 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return response;
         }
 
+        //Register method for employee and manager
         public async Task<ServiceResponse<string>> Register(UserRegisterDto model)
         {
             ServiceResponse<string> response = new ServiceResponse<string>();
 
+            //Check whether the given email is valid or not
             if (!IsEmailValid(model.Email))
             {
                 response.Success = false;
@@ -91,6 +90,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
+            //Checks for the username in the Users
             if (await UserExists(model.UserName))
             {
                 response.Success = false;
@@ -98,6 +98,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
+            // Check if the email already exists in the Users table.
             var ExistingEmail = await _dbContext.Users.FirstOrDefaultAsync(
                 e => model.Email == e.Email
             );
@@ -108,6 +109,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
+            //If username and email is unique generate OTP 
             OtpGenerator otpGenerator = new OtpGenerator();
             string otp = otpGenerator.GenerateOtp();
 
@@ -116,12 +118,15 @@ namespace Organisation_WebAPI.Services.AuthRepo
             );
             DateTimeOffset otpExpiration = indianTime.AddMinutes(2);
 
+             // Create password hash and salt for user password.
             CreatePasswordHash(model.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
+            // Begin a transaction to ensure atomicity of database operations.
             using (var transaction = await _dbContext.Database.BeginTransactionAsync())
             {
                 try
-                {
+                {   
+                    //Set user details in User Table 
                     var user = new User
                     {
                         UserName = model.UserName,
@@ -135,6 +140,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
                     await _dbContext.Users.AddAsync(user);
                     await _dbContext.SaveChangesAsync();
 
+                    //If user role is employee , store it in employee table
                     if (model.Role == UserRole.Employee)
                     {
                         var manager = await _dbContext.Managers.FindAsync(model.ManagerID);
@@ -172,6 +178,8 @@ namespace Organisation_WebAPI.Services.AuthRepo
 
                         await _dbContext.Employees.AddAsync(employee);
                     }
+
+                    //If user role is manager then store it in manager table
                     else if (model.Role == UserRole.Manager)
                     {
                         var department = await _dbContext.Departments.FindAsync(model.DepartmentID);
@@ -246,10 +254,12 @@ namespace Organisation_WebAPI.Services.AuthRepo
             }
         }
 
+        //Verify email and OTP for Registeration of user
         public async Task<ServiceResponse<string>> Verify(string email, string otp)
         {
             ServiceResponse<string> response = new ServiceResponse<string>();
-
+            
+            // Check if the provided email is valid.
             if (!IsEmailValid(email))
             {
                 response.Success = false;
@@ -259,14 +269,19 @@ namespace Organisation_WebAPI.Services.AuthRepo
             var user = await _dbContext.Users.FirstOrDefaultAsync(
                 u => u.Email!.ToLower() == email.ToLower()
             );
+
+            // Check if a user with the given email was found.
             if (user != null)
-            {
+            {   
+                // Check if the user has exceeded the maximum OTP resend limit.
                 if (user.OtpResendCount >= 3)
                 {
                     response.Success = false;
                     response.Message = "Maximum OTP resend limit reached.";
                     return response;
                 }
+
+                // Check if the OTP provided matches the OTP stored for the user.
                 if (user.Otp == otp)
                 {
                     if (user.OtpExpiration > DateTimeOffset.UtcNow)
@@ -299,6 +314,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return response;
         }
 
+        //Checks whether a user exists in the User Table
         public async Task<bool> UserExists(string username)
         {
             if (await _dbContext.Users.AnyAsync(u => u.UserName!.ToLower() == username.ToLower()))
@@ -308,18 +324,22 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return false;
         }
 
+        //Forgot Password method for resetting the password
         public async Task<ServiceResponse<string>> ForgotPassword(string email)
         {
             var response = new ServiceResponse<string>();
             var user = await _dbContext.Users.FirstOrDefaultAsync(
                 u => u.Email!.ToLower() == email.ToLower()
             );
+
+            // Check if the provided email is valid.
             if (!IsEmailValid(email))
             {
                 response.Success = false;
                 response.Message = "Invalid email address.";
                 return response;
             }
+            // Check if the provided email exists in the database.
             if (!await EmailExists(email))
             {
                 response.Success = false;
@@ -327,6 +347,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
+            //If email exists generate OTP
             OtpGenerator otpGenerator = new OtpGenerator();
             string otp = otpGenerator.GenerateOtp();
 
@@ -356,16 +377,20 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return response;
         }
 
+        
         public async Task<ServiceResponse<ResetPasswordDto>> ResetPassword(ResetPasswordDto request)
         {
             ServiceResponse<ResetPasswordDto> response = new ServiceResponse<ResetPasswordDto>();
 
+            // Check if the provided email is not null.
             if (request.Email is not null)
-            {
+            {   
+                // Try to find a user with the given email in the database.
                 var user = await _dbContext.Users.FirstOrDefaultAsync(
                     u => u.Email!.ToLower() == request.Email.ToLower()
                 );
 
+                // Check if a user with the given email was found.
                 if (user != null)
                 {
                     if (user.IsVerified == false)
@@ -411,6 +436,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return response;
         }
 
+        //Retrieve user from database by userId
         public async Task<ServiceResponse<GetUserDto>> GetUserById(int id)
         {
             var response = new ServiceResponse<GetUserDto>();
@@ -427,6 +453,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return response;
         }
 
+        //Remove user from database by userId
         public async Task<ServiceResponse<string>> DeleteUserById(int id)
         {
             var response = new ServiceResponse<string>();
@@ -467,6 +494,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return response;
         }
 
+        //Retrieves all users from the database 
         public async Task<ServiceResponse<List<GetUserDto>>> GetAllUsers()
         {
             var response = new ServiceResponse<List<GetUserDto>>();
@@ -478,6 +506,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return response;
         }
 
+        //Appoint new manager for available department 
         public async Task<ServiceResponse<string>> AppointNewManager(
             int managerId,
             NewManagerDto model
@@ -550,6 +579,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
         {
             var response = new ServiceResponse<string>();
 
+            // Check whether the given email is valid or not.
             if (!IsEmailValid(email))
             {
                 response.Success = false;
@@ -557,10 +587,12 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
+            // Try to find a user with the given email in the database.
             var user = await _dbContext.Users.FirstOrDefaultAsync(
                 u => u.Email!.ToLower() == email.ToLower()
             );
 
+            // Check if a user with the given email exists.
             if (user == null)
             {
                 response.Success = false;
@@ -568,6 +600,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
+             // Check if the user has reached the maximum OTP resend limit.
             if (user.OtpResendCount >= 3)
             {
                 response.Success = false;
@@ -575,6 +608,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 return response;
             }
 
+            //Generate otp for reset password
             OtpGenerator otpGenerator = new OtpGenerator();
             string otp = otpGenerator.GenerateOtp();
 
@@ -605,6 +639,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return response;
         }
 
+        //Check whether email exists in the database or not 
         public async Task<bool> EmailExists(string email)
         {
             if (await _dbContext.Users.AnyAsync(u => u.Email!.ToLower() == email.ToLower()))
@@ -614,6 +649,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
             return false;
         }
 
+        //Create password Hash for the given password
         private static void CreatePasswordHash(
             string password,
             out byte[] passwordHash,
@@ -627,6 +663,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
             }
         }
 
+        //Verify password has for password verification
         private static bool VerifyPasswordHash(
             string password,
             byte[] passwordHash,
