@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Organisation_WebAPI.Dtos.EmployeeTaskDto;
@@ -24,6 +20,7 @@ namespace Organisation_WebAPI.Controllers
             _jwtUtils = jwtUtils;
         }
 
+        //Endpoint to get All employee Tasks
         [HttpGet("GetEmployeeTasks")]
         [Authorize(Roles = nameof(UserRole.Manager))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> GetEmployeeTasks()
@@ -36,13 +33,13 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
         
+        //Endpoint to get  All Tasks of an employee by employeeId
         [HttpPost("GetEmployeeTasksByEmployeeId")]  
         [Authorize(Roles = nameof(UserRole.Manager))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> GetEmployeeTasksByEmployeeId(int employeeid, PaginationInput paginationInput)
         {
 
             int managerId = _jwtUtils.GetUserId();
-            Console.WriteLine(managerId);
             var response =  await _employeeTaskService.GetAllEmployeeTasksByEmployeeId(managerId,employeeid, paginationInput);
 
 
@@ -58,6 +55,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to get New Tasks of an employee by employeeId
         [HttpGet("GetNewEmployeeTasksByEmployeeId")]
         [Authorize(Roles = nameof(UserRole.Employee))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> GetNewEmployeeTasks(int id)
@@ -69,11 +67,12 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to get Inprogress Tasks of an employee by employeeId
         [HttpGet("GetInProgressEmployeeTasksByEmployeeId")]
         [Authorize(Roles = nameof(UserRole.Employee))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> GetInProgressEmployeeTasks(int id)
         {
-            var response =  await _employeeTaskService.GetEmployeeOngoingTaskByEmployeeId(id);
+            var response =  await _employeeTaskService.GetEmployeeInProgressTaskByEmployeeId(id);
 
             if(!response.Success){
                 return BadRequest(response);
@@ -81,6 +80,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to get Completed Task of an employee by employeeId
         [HttpGet("GetCompletedEmployeeTasksByEmployeeId")] 
         [Authorize(Roles = nameof(UserRole.Employee))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> GetCompletedEmployeeTasks(int id)
@@ -93,6 +93,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to get the Pending Tasks of an employee
         [HttpGet("GetPendingEmployeeTasksByEmployeeId")]
         [Authorize(Roles = nameof(UserRole.Employee))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> GetPendingEmployeeTasksByEmployeeId(int id)
@@ -105,6 +106,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to get count of new Task 
         [HttpGet("GetNewTaskCount")]
         [Authorize(Roles = nameof(UserRole.Employee))]
         public async Task<ActionResult<ServiceResponse<int>>> GetNewEmployeeTaskCount(int id){
@@ -117,6 +119,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
+        //Endpoint to create Task for employee
         [HttpPost("CreateEmployeeTasks")]
         [Authorize(Roles = nameof(UserRole.Manager))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> AddEmployeeTask(AddEmployeeTaskDto newEmployeeTask)
@@ -129,7 +132,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
-        
+        //Endpoint to delete Task by employeeTaskId
         [HttpDelete("DeleteEmployeeTask")]
         [Authorize(Roles = nameof(UserRole.Manager))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> DeleteEmployeeTask(int id){
@@ -141,6 +144,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
         
+        //Endpoint to get Task by employeeTaskId
         [HttpGet("GetEmployeeTasksById")]
         [Authorize(Roles = nameof(UserRole.Employee))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> GetEmployeeTask(int id)
@@ -153,7 +157,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
-
+        //Endpoint to update Task of Employee by employeeTaskId
         [HttpPut("UpdateEmployeeTask")]
         [Authorize(Roles = nameof(UserRole.Manager))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> UpdateEmployeeTask(UpdateEmployeeTaskDto updatedEmployeeTask,int id){
@@ -166,7 +170,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
-
+        //Endpoint to update employeeTaskStatus by employeeTaskId
         [HttpPut("UpdateEmployeeTaskStatus")]
         [Authorize(Roles = nameof(UserRole.Employee))]
         public async Task<ActionResult<ServiceResponse<GetEmployeeTaskDto>>> UpdateEmployeeTaskStatus(UpdateEmployeeTaskStatusDto updatedEmployeeTaskStatus,int id){
