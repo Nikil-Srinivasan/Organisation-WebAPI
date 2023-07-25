@@ -440,9 +440,16 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                 {
                     DateTime TaskDueDate = (DateTime)employeeTask.TaskDueDate!;
                     DateTime dueDate = TaskDueDate.Date;
+                    
                     if (dueDate < currentDate)
                     {
                         employeeTask.TaskStatus = Status.Pending;
+                        _context.EmployeeTasks.Update(employeeTask);
+                    }
+
+                    if (employeeTask.TaskStatus == Status.Pending && dueDate > currentDate){
+
+                        employeeTask.TaskStatus = Status.New;
                         _context.EmployeeTasks.Update(employeeTask);
                     }
                 }
