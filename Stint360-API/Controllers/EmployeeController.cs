@@ -1,18 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
-using Azure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Organisation_WebAPI.Dtos.DepartmentDto;
 using Organisation_WebAPI.Dtos.EmployeeDto;
-using Organisation_WebAPI.Dtos.ManagerDto;
 using Organisation_WebAPI.InputModels;
 using Organisation_WebAPI.Services.AuthRepo;
 using Organisation_WebAPI.Services.Employees;
-using Organisation_WebAPI.Services.Pagination;
 
 namespace Organisation_WebAPI.Controllers
 {
@@ -31,7 +23,7 @@ namespace Organisation_WebAPI.Controllers
             _mapper = mapper;
         }
 
-        //Retrieves all employees from the database
+        //Endpoint to retrieves all employees from the database
 
         [HttpPost("GetAllEmployees")]
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -46,7 +38,7 @@ namespace Organisation_WebAPI.Controllers
         }
 
 
-        // Retrieves a employee from the database based on the provided employeeID
+        //Endpoint to retrieves a employee from the database based on the provided employeeID
 
         [HttpGet("GetEmployeeById")]
         [Authorize(Roles = nameof(UserRole.Employee) + "," + nameof(UserRole.Manager))]
@@ -60,7 +52,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
-        // Retrieves all employees from the database based on the provided ManagerID 
+        //Endpoint to retrieves all employees from the database based on the provided ManagerID 
 
         [HttpGet("GetAllEmployeesByManagerId")]
         [Authorize(Roles = nameof(UserRole.Admin) + "," + nameof(UserRole.Manager))]
@@ -77,7 +69,7 @@ namespace Organisation_WebAPI.Controllers
         }
         
         
-        // Updates an employee from the database based on the provided employeeID
+        //Endpoint to updates an employee from the database based on the provided employeeID
 
         [HttpPut("UpdateEmployee")]
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -90,7 +82,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
         
-        // Deletes an employee from the database based on the provided employeeID
+        //Endpoint to delete an employee from the database based on the provided employeeID
 
         [HttpDelete("DeleteEmployee")]
         [Authorize(Roles = nameof(UserRole.Admin))]

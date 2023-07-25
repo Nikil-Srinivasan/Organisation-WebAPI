@@ -1,16 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using AutoMapper;
 using EmailService;
 using Microsoft.EntityFrameworkCore;
 using Organisation_WebAPI.Data;
 using Organisation_WebAPI.Dtos.EmployeeDto;
-using Organisation_WebAPI.Dtos.ManagerDto;
 using Organisation_WebAPI.InputModels;
-using Organisation_WebAPI.Models;
 using Organisation_WebAPI.Services.Pagination;
 using Organisation_WebAPI.ViewModels;
 
@@ -33,14 +26,27 @@ namespace Organisation_WebAPI.Services.Employees
 
         // Adds a new Employee to the database
         public async Task<ServiceResponse<List<GetEmployeeDto>>> AddEmployee(AddEmployeeDto newEmployee)
-        {
+        {   
             var serviceResponse = new ServiceResponse<List<GetEmployeeDto>>();
-            var employee = _mapper.Map<Employee>(newEmployee);
 
-             _context.Employees.Add(employee);
-            await _context.SaveChangesAsync();
-            serviceResponse.Data = await _context.Employees.Select(c => _mapper.Map<GetEmployeeDto>(c)).ToListAsync();
-            return serviceResponse;
+            try  {
+
+                var employee = _mapper.Map<Employee>(newEmployee);
+                
+                //Add employee to the Database
+                _context.Employees.Add(employee);
+                await _context.SaveChangesAsync();
+
+                serviceResponse.Data = await _context.Employees.Select(c => _mapper.Map<GetEmployeeDto>(c)).ToListAsync();
+                return serviceResponse;
+            }
+            catch(Exception ex) { 
+
+                serviceResponse.Success = false;
+                serviceResponse.Message = ex.Message;
+
+            }
+        return serviceResponse;
         }
 
         // Deletes a employee from the database based on the provided ID
@@ -48,13 +54,18 @@ namespace Organisation_WebAPI.Services.Employees
         {
             var serviceResponse = new ServiceResponse<List<GetEmployeeDto>>();
             try {
-
+            
+            //Fetch an employee from database with employeeId
             var employee = await _context.Employees.FirstOrDefaultAsync(c => c.EmployeeID == id);
+
+            //If employee is null throw exception of employeeId not found
             if (employee is null)
                 throw new Exception($"Employee with id '{id}' not found");
             
+            //Removes employee from the database
             _context.Employees.Remove(employee);
             await _context.SaveChangesAsync();
+
             serviceResponse.Data = _context.Employees.Select(c => _mapper.Map<GetEmployeeDto>(c)).ToList();
             }
             catch(Exception ex)
@@ -115,10 +126,13 @@ namespace Organisation_WebAPI.Services.Employees
                    .Include(e => e.Manager)
                    .FirstOrDefaultAsync(c => c.EmployeeID == id);
 
+                //If employee is null throw exception of employeeId not found
                 if (dbEmployee is null)
                     throw new Exception($"Employee with id '{id}' not found");
 
                 var manager = dbEmployee.Manager;
+
+                //If manager is null throw exception of managerId not found for employeeId
                 if (manager is null)
                     throw new Exception($"Manager not found for Employee with id '{id}'");
 
@@ -138,16 +152,18 @@ namespace Organisation_WebAPI.Services.Employees
         }
 
         
-
+        //Retrieve all employees from database based on managerId
         public async Task<ServiceResponse<List<GetEmployeeDto>>> GetAllEmployeesByManagerId(int managerId)
         {
             var serviceResponse = new ServiceResponse<List<GetEmployeeDto>>();
             try
-            {
+            {   
+
                 var manager = await _context.Managers
                     .Include(m => m.Employees)
                     .FirstOrDefaultAsync(m => m.ManagerId == managerId);
-
+                
+                //If manager is null throw exception of managerId not found
                 if (manager == null)
                 {
                     serviceResponse.Success = false;
@@ -173,13 +189,16 @@ namespace Organisation_WebAPI.Services.Employees
         }
 
 
-
+        //Update Employee details with employeeId
         public async Task<ServiceResponse<UpdateEmployeeDto>> UpdateEmployee(UpdateEmployeeDto updatedEmployee, int id)
         {
             var serviceResponse = new ServiceResponse<UpdateEmployeeDto>();
             try {
+
+                //Fetch employee record from database with employeeId
                 var employee = await _context.Employees.FirstOrDefaultAsync(c => c.EmployeeID == id);
 
+                //If employee is null throw exception of employeeId not found
                 if (employee is null)
                     throw new Exception($"Employee with id '{id}' not found");
 
