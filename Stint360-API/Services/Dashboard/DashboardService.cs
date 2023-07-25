@@ -62,7 +62,7 @@ namespace Organisation_WebAPI.Services.Dashboard
 
                 // Get all possible Status enum values
                 var allStatuses = Enum.GetValues(typeof(Status)).Cast<Status>();
-
+                
                 // Create a dictionary with all possible Status enum values and their counts
                 var finalStatusCounts = allStatuses.ToDictionary(
                     status => status,
