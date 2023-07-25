@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -20,8 +18,10 @@ namespace Organisation_WebAPI.Services.AuthRepo
         public int GetUserId() => int.Parse(_httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
 
 
+        //Method for generating JWT Token with user 
         public string GenerateJwtToken(User user)
-        {
+        {   
+            //Claims userId,userName and Role in the JWT Token
             List<Claim> claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()),
@@ -29,6 +29,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
                 new Claim(ClaimTypes.Role, user.Role.ToString())
             };
 
+            //Declaring configurations and Token Genarating Algorithm
             SymmetricSecurityKey key = new SymmetricSecurityKey(System.Text.Encoding.UTF8
                 .GetBytes(_configuration.GetSection("AppSettings:Token").Value!));
 
@@ -45,6 +46,7 @@ namespace Organisation_WebAPI.Services.AuthRepo
 
             return tokenHandler.WriteToken(token);
         }
+
 
         public int? ValidateJwtToken(string token)
         {

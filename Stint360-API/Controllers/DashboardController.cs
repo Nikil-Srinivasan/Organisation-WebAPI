@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Organisation_WebAPI.Services.Dashboard;
@@ -21,7 +16,7 @@ namespace Organisation_WebAPI.Controllers
             _dashboardService = dashboardService;
         }
         
-        //Retrieves Total Number of Employees in each Department 
+        //Endpoint to retrieves Total Number of Employees in each Department 
 
         [HttpGet("GetTotalEmployeeCount")]
         [Authorize(Roles = nameof(UserRole.Admin))]
@@ -35,7 +30,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
-        //Retrives Total Task counts with provided employeeID
+        //Endpoint to retrives Total Task counts with provided employeeID
 
         [HttpGet("GetEmployeeTasksCount")]
         [Authorize(Roles = nameof(UserRole.Employee))]
@@ -50,7 +45,7 @@ namespace Organisation_WebAPI.Controllers
             return Ok(response);
         }
 
-        //Retrieves Total Task counts with provided managerID
+        //Endpoint to retrieves Total Task counts with provided managerID
 
         [HttpGet("GetEmployeeTasksByManager")]
         [Authorize(Roles = nameof(UserRole.Manager))]

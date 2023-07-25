@@ -11,7 +11,7 @@ namespace Organisation_WebAPI.DataSeed
                 serviceProvider.GetRequiredService<DbContextOptions<OrganizationContext>>()))
             {
                 // Check if admin user already exists
-                if (context.Users.Any(u => u.UserName == "adminuser"))
+                if (context.Users.Any(u => u.UserName == "Vikram"))
                 {
                     return; // Admin user already seeded, no need to proceed
                 }
@@ -22,8 +22,8 @@ namespace Organisation_WebAPI.DataSeed
                 // Create admin user instance
                 var adminUser = new User
                 {
-                    UserName = "adminuser",
-                    Email = "admin@example.com",
+                    UserName = "Vikram",
+                    Email = "vikram@gmail.com",
                     IsVerified = true,
                     PasswordHash = passwordHash,
                     PasswordSalt = passwordSalt,
