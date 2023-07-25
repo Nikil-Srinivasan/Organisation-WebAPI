@@ -27,7 +27,7 @@ namespace Organisation_WebAPI.Services.Employees
         {
             _context = context; // Injects the OrganizationContext instance
             _mapper = mapper; // Injects the IMapper instance
-            _paginationServices = paginationServices;
+            _paginationServices = paginationServices; // Injects the IPaginationServices instance
         }
 
 
