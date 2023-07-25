@@ -308,7 +308,7 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                 {
                     DateTime TaskDueDate = (DateTime)employeeTask.TaskDueDate!;
                     DateTime dueDate = TaskDueDate.Date;
-                    if (dueDate <= currentDate)
+                    if (dueDate < currentDate)
                     {
                         employeeTask.TaskStatus = Status.Pending;
                         _context.EmployeeTasks.Update(employeeTask);
@@ -434,6 +434,28 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                 if (dbEmployeeTasks.Count == 0)
                     throw new Exception($"Employee has no tasks.");
 
+                 //Checks whether the current date has reached dueDate
+                var currentDate = DateTime.Today;
+                foreach (var employeeTask in dbEmployeeTasks)
+                {
+                    DateTime TaskDueDate = (DateTime)employeeTask.TaskDueDate!;
+                    DateTime dueDate = TaskDueDate.Date;
+                    
+                    if (dueDate < currentDate)
+                    {
+                        employeeTask.TaskStatus = Status.Pending;
+                        _context.EmployeeTasks.Update(employeeTask);
+                    }
+
+                    if (employeeTask.TaskStatus == Status.Pending && dueDate > currentDate){
+
+                        employeeTask.TaskStatus = Status.New;
+                        _context.EmployeeTasks.Update(employeeTask);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
                 var employeeTasks = _mapper.Map<List<GetEmployeeTaskDto>>(dbEmployeeTasks);
 
                 var result = _paginationServices.GetPagination(employeeTasks, paginationInput);
@@ -473,13 +495,15 @@ namespace Organisation_WebAPI.Services.EmployeeTasks
                 var dbEmployeeTasks = await _context.EmployeeTasks
                     .Where(t => t.EmployeeId == id && t.TaskStatus == Status.New)
                     .ToListAsync();
+                
+            
 
                 foreach (var employeeTask in dbEmployeeTasks)
                 {
                     DateTime TaskDueDate = (DateTime)employeeTask.TaskDueDate!;
                     DateTime dueDate = TaskDueDate.Date;
 
-                    if (dueDate <= currentDate)
+                    if (dueDate < currentDate)
                     {
                         employeeTask.TaskStatus = Status.Pending;
                         _context.EmployeeTasks.Update(employeeTask);
